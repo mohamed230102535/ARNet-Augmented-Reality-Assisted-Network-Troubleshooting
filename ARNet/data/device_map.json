@@ -1,0 +1,17 @@
+{
+    "SW1": {
+        "ip": "192.168.1.10",
+        "type": "switch",
+        "location": "Server Room"
+    },
+    "RT1": {
+        "ip": "192.168.1.1",
+        "type": "router",
+        "location": "Network Closet"
+    },
+    "AP1": {
+        "ip": "192.168.1.20",
+        "type": "access_point",
+        "location": "Office Area"
+    }
+} 
