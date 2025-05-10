@@ -39,39 +39,45 @@ class AROverlay:
             return frame
 
         try:
-            # Create semi-transparent overlay
-            overlay = frame.copy()
-            
             # Get device status
             device_id = diagnostics.get('device_id', 'Unknown')
             ip = diagnostics.get('ip', 'Unknown')
-            ping = diagnostics.get('ping')
+            ping_stats = diagnostics.get('ping', {})
             ports = diagnostics.get('ports', {})
             
-            # Calculate status color
-            status_color = self._get_status_color(ping)
+            # Calculate status color based on ping average
+            ping_avg = ping_stats.get('avg') if ping_stats else None
+            status_color = self._get_status_color(ping_avg)
             
-            # Create info text with more details
+            # Create simplified info text
             info_text = [
-                f"Device ID: {device_id}",
-                f"IP Address: {ip}",
-                f"Ping: {ping if ping else 'No response'} ms",
-                "Port Status:",
+                f"Device: {device_id}",
+                f"IP: {ip}",
             ]
             
-            # Add port information
-            for port, status in ports.items():
-                port_color = self.colors['green'] if status == 'open' else self.colors['red']
-                info_text.append(f"  • Port {port}: {status}")
+            # Add ping information
+            if ping_stats:
+                status = ping_stats.get('status', 'unknown')
+                info_text.extend([
+                    f"Status: {status.upper()}",
+                    f"Ping: {ping_stats.get('avg', 'N/A')}ms",
+                    f"Loss: {ping_stats.get('loss', 'N/A')}"
+                ])
+            else:
+                info_text.append("Status: No response")
             
-            # Add timestamp
-            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            info_text.append(f"Last Updated: {current_time}")
+            # Add essential port information
+            if ports:
+                info_text.append("Ports:")
+                for port, port_info in sorted(ports.items()):
+                    service = port_info.get('service', 'Unknown')
+                    status = port_info.get('status', 'unknown')
+                    info_text.append(f"  {service}: {status}")
             
             # Calculate box dimensions
             text_height = 30
             box_height = len(info_text) * text_height + self.padding * 2
-            box_width = 350
+            box_width = 300  # Reduced width for simpler display
             
             # Draw semi-transparent background
             overlay_rect = np.zeros((box_height, box_width, 3), dtype=np.uint8)
@@ -86,7 +92,7 @@ class AROverlay:
             frame[0:title_height, 0:box_width] = title_rect
             
             # Draw title
-            cv2.putText(frame, f"Network Device Status", 
+            cv2.putText(frame, f"Network Status", 
                       (self.padding, 25),
                       self.title_font, self.title_scale, self.colors['white'], 
                       self.line_type)
@@ -94,11 +100,6 @@ class AROverlay:
             # Draw information
             for i, text in enumerate(info_text):
                 y = title_height + self.padding + (i * text_height)
-                # Draw text with shadow effect
-                cv2.putText(frame, text,
-                          (self.padding + 1, y + 1),
-                          self.info_font, self.info_scale, self.colors['black'],
-                          self.line_type)
                 cv2.putText(frame, text,
                           (self.padding, y),
                           self.info_font, self.info_scale, self.colors['white'],

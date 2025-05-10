@@ -2,7 +2,7 @@ import qrcode
 import json
 import os
 
-def generate_qr_code(device_id, ip, output_dir="../data/qr_samples"):
+def generate_qr_code(device_id, ip, output_dir="data/qr_samples"):
     """
     Generate a QR code for a network device.
     
@@ -50,12 +50,11 @@ def main():
     """Generate QR codes for test devices."""
     # Test devices with their IDs and IPs
     test_devices = [
-        ("SW1", "192.168.1.10"),
-        ("RT1", "192.168.1.1"),
-        ("AP1", "192.168.1.20")
+        ("TPLINK", "192.168.0.1"),
+        ("DEVICE1", "192.168.0.101")
     ]
     
-    print("Generating QR codes for test devices...")
+    print("Generating QR codes for network devices...")
     for device_id, ip in test_devices:
         print(f"\nGenerating QR code for {device_id}...")
         generate_qr_code(device_id, ip)

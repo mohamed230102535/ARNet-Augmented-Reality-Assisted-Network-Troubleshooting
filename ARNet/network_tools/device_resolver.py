@@ -30,7 +30,7 @@ class DeviceResolver:
             print(f"Error loading device map: {str(e)}")
             return {}
 
-    def ping(self, ip, count=3):
+    def ping(self, ip, count=2):
         """
         Enhanced ping function with multiple attempts and statistics.
         
@@ -42,16 +42,16 @@ class DeviceResolver:
             dict: Ping statistics
         """
         try:
-            # Windows ping command
+            # Windows ping command with shorter timeout
             if platform.system().lower() == "windows":
-                ping_cmd = ["ping", "-n", str(count), ip]
+                ping_cmd = ["ping", "-n", str(count), "-w", "1000", ip]  # 1 second timeout
             else:
-                ping_cmd = ["ping", "-c", str(count), ip]
+                ping_cmd = ["ping", "-c", str(count), "-W", "1", ip]  # 1 second timeout
 
-            start_time = time.time()
             result = subprocess.run(ping_cmd, 
                                  capture_output=True, 
-                                 text=True)
+                                 text=True,
+                                 timeout=2)  # Overall timeout of 2 seconds
             
             # Parse ping statistics
             output = result.stdout
@@ -91,11 +91,20 @@ class DeviceResolver:
                 'status': 'down'
             }
             
+        except subprocess.TimeoutExpired:
+            print(f"Ping timeout for {ip}")
+            return {
+                'avg': None,
+                'min': None,
+                'max': None,
+                'loss': '100%',
+                'status': 'down'
+            }
         except Exception as e:
             print(f"Error pinging device: {str(e)}")
             return None
 
-    def check_port(self, ip, port, timeout=1):
+    def check_port(self, ip, port, timeout=0.5):
         """Check if a port is open using socket connection."""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -121,22 +130,54 @@ class DeviceResolver:
             ip = device_info.get('ip')
             
             if not device_id or not ip:
+                print(f"Missing device_id or ip in device_info: {device_info}")
                 return None
 
             # Get device details from map
             device_details = self.device_map.get(device_id, {})
+            if not device_details:
+                print(f"Device {device_id} not found in device map")
+                return None
             
             # Get ping statistics
             ping_stats = self.ping(ip)
+            if not ping_stats:
+                print(f"Failed to get ping statistics for {ip}")
+                ping_stats = {
+                    'avg': None,
+                    'min': None,
+                    'max': None,
+                    'loss': '100%',
+                    'status': 'down'
+                }
             
-            # Check common ports
+            # Only check essential ports for faster response
+            essential_ports = {
+                80: 'HTTP',
+                443: 'HTTPS'
+            }
+            
+            # Check essential ports
             ports = {}
-            for port, service in self.common_ports.items():
+            for port, service in essential_ports.items():
                 is_open = self.check_port(ip, port)
                 ports[port] = {
                     'service': service,
                     'status': 'open' if is_open else 'closed'
                 }
+            
+            # Add device-specific ports if available
+            device_ports = device_details.get('ports', {})
+            for port, service in device_ports.items():
+                try:
+                    port_num = int(port)
+                    is_open = self.check_port(ip, port_num)
+                    ports[port_num] = {
+                        'service': service,
+                        'status': 'open' if is_open else 'closed'
+                    }
+                except ValueError:
+                    print(f"Invalid port number in device map: {port}")
             
             # Build enhanced diagnostics
             diagnostics = {
@@ -144,6 +185,7 @@ class DeviceResolver:
                 'ip': ip,
                 'type': device_details.get('type', 'unknown'),
                 'location': device_details.get('location', 'unknown'),
+                'model': device_details.get('model', 'unknown'),
                 'ping': ping_stats,
                 'ports': ports,
                 'last_check': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
