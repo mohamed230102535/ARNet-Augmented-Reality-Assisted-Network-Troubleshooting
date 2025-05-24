@@ -1,0 +1,21 @@
+{
+    "camera_width": 640,
+    "camera_height": 480,
+    "fps": 30,
+    "scan_interval": 2.0,
+    "ping_interval": 3.0,
+    "skip_frames": 2,
+    "log_level": "INFO",
+    "save_path": "captures/",
+    "network_timeout": 5.0,
+    "qr_detection": {
+        "min_confidence": 0.7,
+        "max_qr_size": 0.8
+    },
+    "ar_overlay": {
+        "font_scale": 0.6,
+        "text_color": [0, 255, 0],
+        "box_color": [0, 255, 0],
+        "line_thickness": 2
+    }
+} 
